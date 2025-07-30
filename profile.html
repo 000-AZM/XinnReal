@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Profile</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    nav {background:#111; padding:10px; display:flex; justify-content:space-around; color:white;}
+    nav a {color:white; text-decoration:none;}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="feed.html">Feed</a>
+    <a href="profile.html">Profile</a>
+    <a href="friends.html">Friends</a>
+    <a href="chat.html">Chat</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="logout()">Logout</a>
+  </nav>
+
+  <h2>Your Profile</h2>
+  <div id="profileInfo"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
+      authDomain: "coin-base-by-hector.firebaseapp.com",
+      projectId: "coin-base-by-hector"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = 'login.html';
+      else loadProfile(user.uid);
+    });
+
+    function loadProfile(uid) {
+      db.collection('users').doc(uid).get().then(doc => {
+        const u = doc.data();
+        document.getElementById('profileInfo').innerHTML = `
+          <p><b>Name:</b> ${u.name}</p>
+          <p><b>Email:</b> ${u.email}</p>
+          <p><b>Friends count:</b> ${u.friends ? u.friends.length : 0}</p>
+        `;
+      });
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+  </script>
+</body>
+</html>
