@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Feed</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    nav {background:#111; padding:10px; display:flex; justify-content:space-around; color:white;}
+    nav a {color:white; text-decoration:none;}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="feed.html">Feed</a>
+    <a href="profile.html">Profile</a>
+    <a href="friends.html">Friends</a>
+    <a href="chat.html">Chat</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="logout()">Logout</a>
+  </nav>
+
+  <h2>Feed</h2>
+  <textarea id="postText" placeholder="Write something..."></textarea><br>
+  <select id="visibility">
+    <option value="public">Public</option>
+    <option value="private">Only Me</option>
+  </select><br>
+  <button onclick="addPost()">Post</button>
+
+  <div id="posts"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
+      authDomain: "coin-base-by-hector.firebaseapp.com",
+      projectId: "coin-base-by-hector"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = 'login.html';
+      else loadPosts(user.uid);
+    });
+
+    function addPost() {
+      const user = auth.currentUser;
+      const text = document.getElementById('postText').value;
+      const vis = document.getElementById('visibility').value;
+      if (!text) return alert('Write something first!');
+      db.collection('posts').add({
+        uid: user.uid,
+        text,
+        visibility: vis,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        document.getElementById('postText').value = '';
+        loadPosts(user.uid);
+      });
+    }
+
+    function loadPosts(uid) {
+      db.collection('posts').orderBy('createdAt', 'desc').get().then(snap => {
+        const postsDiv = document.getElementById('posts');
+        postsDiv.innerHTML = '';
+        snap.forEach(doc => {
+          const p = doc.data();
+          if (p.visibility === 'public' || p.uid === uid) {
+            postsDiv.innerHTML += `<p><b>${p.text}</b> - ${p.visibility}</p>`;
+          }
+        });
+      });
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+  </script>
+</body>
+</html>
