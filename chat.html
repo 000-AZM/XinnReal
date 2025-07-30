@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    nav {background:#111; padding:10px; display:flex; justify-content:space-around; color:white;}
+    nav a {color:white; text-decoration:none;}
+    #friendsList {max-height: 150px; overflow-y: scroll; border: 1px solid #ccc;}
+    #chatBox {height: 300px; overflow-y: scroll; border: 1px solid #ccc; margin-top: 10px;}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="feed.html">Feed</a>
+    <a href="profile.html">Profile</a>
+    <a href="friends.html">Friends</a>
+    <a href="chat.html">Chat</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="logout()">Logout</a>
+  </nav>
+
+  <h2>Chat</h2>
+
+  <div id="friendsList"></div>
+
+  <div>
+    <input id="msgInput" placeholder="Type your message" style="width: 80%;">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <div id="chatBox"></div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
+      authDomain: "coin-base-by-hector.firebaseapp.com",
+      projectId: "coin-base-by-hector"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUserId = null;
+    let selectedFriendId = null;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = 'login.html';
+      else {
+        currentUserId = user.uid;
+        loadFriends();
+      }
+    });
+
+    function loadFriends() {
+      db.collection('users').doc(currentUserId).get().then(doc => {
+        const friends = doc.data().friends || [];
+        if (friends.length === 0) {
+          document.getElementById('friendsList').innerHTML = 'No friends to chat with';
+          return;
+        }
+        let html = '<b>Friends:</b><br>';
+        friends.forEach(fid => {
+          db.collection('users').doc(fid).get().then(d => {
+            const friendName = d.data().name || 'Unknown';
+            html += `<div><button onclick="selectFriend('${fid}', '${friendName}')">${friendName}</button></div>`;
+            document.getElementById('friendsList').innerHTML = html;
+          });
+        });
+      });
+    }
+
+    function selectFriend(fid, fname) {
+      selectedFriendId = fid;
+      document.getElementById('chatBox').innerHTML = `<h3>Chat with ${fname}</h3>`;
+      loadMessages();
+    }
+
+    function sendMessage() {
+      if (!selectedFriendId) return alert('Select a friend first');
+      const text = document.getElementById('msgInput').value.trim();
+      if (!text) return;
+      db.collection('messages').add({
+        from: currentUserId,
+        to: selectedFriendId,
+        text,
+        time: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        document.getElementById('msgInput').value = '';
+        loadMessages();
+      });
+    }
+
+    function loadMessages() {
+      db.collection('messages')
+        .where('from', 'in', [currentUserId, selectedFriendId])
+        .orderBy('time')
+        .get()
+        .then(snapshot => {
+          let html = '';
+          snapshot.forEach(doc => {
+            const m = doc.data();
+            if (
+              (m.from === currentUserId && m.to === selectedFriendId) ||
+              (m.from === selectedFriendId && m.to === currentUserId)
+            ) {
+              html += `<p><b>${m.from === currentUserId ? 'You' : 'Friend'}:</b> ${m.text}</p>`;
+            }
+          });
+          document.getElementById('chatBox').innerHTML = html;
+        });
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+  </script>
+</body>
+</html>
