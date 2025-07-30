@@ -1,37 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Xinn Social App - Home</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 400px;
-      margin: 80px auto;
-      text-align: center;
-    }
-    h1 {
-      margin-bottom: 30px;
-    }
-    a {
-      display: block;
-      margin: 12px 0;
-      font-size: 18px;
-      text-decoration: none;
-      color: #2196F3;
-    }
-    a:hover {
-      text-decoration: underline;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Xinn Social</title>
+  <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
-  <h1>Welcome to Xinn Social</h1>
-  <a href="login.html">Login</a>
-  <a href="register.html">Register</a>
-  <a href="feed.html">Feed</a>
-  <a href="profile.html">Profile</a>
-  <a href="friends.html">Friends</a>
-  <a href="chat.html">Chat</a>
-  <a href="settings.html">Settings</a>
+  <div id="app">
+    <div id="nav">
+      <button onclick="navigate('home')">Home</button>
+      <button onclick="navigate('profile')">Profile</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+
+    <div id="auth">
+      <h2>Login / Register</h2>
+      <input type="email" id="email" placeholder="Email"/><br/>
+      <input type="password" id="password" placeholder="Password"/><br/>
+      <button onclick="login()">Login</button>
+      <button onclick="register()">Register</button>
+    </div>
+
+    <div id="home" class="page hidden">
+      <h2>Post Something</h2>
+      <textarea id="postInput" placeholder="What's on your mind?"></textarea>
+      <button onclick="createPost()">Post</button>
+      <div id="posts"></div>
+    </div>
+
+    <div id="profile" class="page hidden">
+      <h2>Your Posts</h2>
+      <div id="myPosts"></div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
 </body>
 </html>
