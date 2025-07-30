@@ -1,191 +1,37 @@
-<!-- index.html - Full Social App with Custom Login, Feed, Friends, Chat, and Profile -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Xinn Social</title>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore-compat.js"></script>
+  <title>Xinn Social App - Home</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 1rem; max-width: 700px; margin: auto; }
-    input, button, textarea { width: 100%; margin: 0.5rem 0; padding: 0.7rem; }
-    #app, #login-form, #register-form { display: none; }
-    .section { margin-top: 2rem; border-top: 1px solid #ccc; padding-top: 1rem; }
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 80px auto;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 30px;
+    }
+    a {
+      display: block;
+      margin: 12px 0;
+      font-size: 18px;
+      text-decoration: none;
+      color: #2196F3;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
-<h1>Xinn Social App</h1>
-<div id="register-form">
-  <h2>Register</h2>
-  <input type="text" id="reg-username" placeholder="Username">
-  <input type="email" id="reg-email" placeholder="Email">
-  <input type="password" id="reg-password" placeholder="Password">
-  <button onclick="registerUser()">Register</button>
-  <p><a href="#" onclick="toggleForms('login')">Already have account?</a></p>
-</div>
-<div id="login-form">
-  <h2>Login</h2>
-  <input type="email" id="login-email" placeholder="Email">
-  <input type="password" id="login-password" placeholder="Password">
-  <button onclick="loginUser()">Login</button>
-  <p><a href="#" onclick="toggleForms('register')">Create an account</a></p>
-</div>
-<div id="app">
-  <h2>Welcome, <span id="user-name"></span></h2>
-  <button onclick="logoutUser()">Logout</button>
-
-  <div class="section">
-    <h3>Create Post</h3>
-    <textarea id="new-post" placeholder="What's on your mind?"></textarea>
-    <button onclick="createPost()">Post</button>
-  </div>
-
-  <div class="section">
-    <h3>Feed</h3>
-    <div id="feed"></div>
-  </div>
-
-  <div class="section">
-    <h3>Friends</h3>
-    <input type="text" id="friend-email" placeholder="Friend's Email">
-    <button onclick="addFriend()">Add Friend</button>
-    <ul id="friend-list"></ul>
-  </div>
-
-  <div class="section">
-    <h3>Chat</h3>
-    <input type="text" id="chat-user" placeholder="Friend Username">
-    <textarea id="chat-message" placeholder="Type message..."></textarea>
-    <button onclick="sendMessage()">Send</button>
-    <div id="chat-box"></div>
-  </div>
-
-  <div class="section">
-    <h3>Settings</h3>
-    <input type="text" id="update-username" placeholder="New Username">
-    <button onclick="updateProfile()">Update Username</button>
-  </div>
-</div>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
-  authDomain: "coin-base-by-hector.firebaseapp.com",
-  databaseURL: "https://coin-base-by-hector-default-rtdb.firebaseio.com",
-  projectId: "coin-base-by-hector",
-  storageBucket: "coin-base-by-hector.firebasestorage.app",
-  messagingSenderId: "398789890422",
-  appId: "1:398789890422:web:ed6a928037b24be2e36a57",
-  measurementId: "G-SGJJM5K3G9"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-let currentUser = null;
-
-function toggleForms(form) {
-  document.getElementById('register-form').style.display = form === 'register' ? 'block' : 'none';
-  document.getElementById('login-form').style.display = form === 'login' ? 'block' : 'none';
-  document.getElementById('app').style.display = 'none';
-}
-
-async function registerUser() {
-  const username = document.getElementById('reg-username').value;
-  const email = document.getElementById('reg-email').value;
-  const password = document.getElementById('reg-password').value;
-  const exists = await db.collection('users').where('email', '==', email).get();
-  if (!exists.empty) return alert('Email exists');
-  await db.collection('users').add({ username, email, password, friends: [] });
-  alert('Registered!');
-  toggleForms('login');
-}
-
-async function loginUser() {
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
-  const snap = await db.collection('users').where('email', '==', email).where('password', '==', password).get();
-  if (snap.empty) return alert('Wrong credentials');
-  currentUser = { id: snap.docs[0].id, ...snap.docs[0].data() };
-  document.getElementById('user-name').textContent = currentUser.username;
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('login-form').style.display = 'none';
-  loadFeed(); loadFriends();
-}
-
-function logoutUser() {
-  currentUser = null;
-  toggleForms('login');
-}
-
-async function createPost() {
-  const content = document.getElementById('new-post').value;
-  if (!content) return;
-  await db.collection('posts').add({ user: currentUser.username, content, time: Date.now() });
-  document.getElementById('new-post').value = '';
-  loadFeed();
-}
-
-async function loadFeed() {
-  const snap = await db.collection('posts').orderBy('time', 'desc').limit(10).get();
-  const html = snap.docs.map(doc => `<p><strong>${doc.data().user}</strong>: ${doc.data().content}</p>`).join('');
-  document.getElementById('feed').innerHTML = html;
-}
-
-async function addFriend() {
-  const email = document.getElementById('friend-email').value;
-  const snap = await db.collection('users').where('email', '==', email).get();
-  if (snap.empty) return alert('User not found');
-  const friendId = snap.docs[0].id;
-  await db.collection('users').doc(currentUser.id).update({ friends: firebase.firestore.FieldValue.arrayUnion(friendId) });
-  alert('Friend added');
-  loadFriends();
-}
-
-async function loadFriends() {
-  const userDoc = await db.collection('users').doc(currentUser.id).get();
-  const friends = userDoc.data().friends || [];
-  let html = '';
-  for (let fid of friends) {
-    const fdoc = await db.collection('users').doc(fid).get();
-    html += `<li>${fdoc.data().username}</li>`;
-  }
-  document.getElementById('friend-list').innerHTML = html;
-}
-
-async function sendMessage() {
-  const to = document.getElementById('chat-user').value;
-  const msg = document.getElementById('chat-message').value;
-  if (!to || !msg) return;
-  await db.collection('chats').add({ from: currentUser.username, to, msg, time: Date.now() });
-  alert('Sent');
-  document.getElementById('chat-message').value = '';
-  loadChat();
-}
-
-async function loadChat() {
-  const to = document.getElementById('chat-user').value;
-  const snap = await db.collection('chats').where('to', '==', to).get();
-  let html = '';
-  snap.forEach(doc => {
-    const d = doc.data();
-    html += `<p><strong>${d.from}</strong>: ${d.msg}</p>`;
-  });
-  document.getElementById('chat-box').innerHTML = html;
-}
-
-document.getElementById('chat-user').addEventListener('input', loadChat);
-
-async function updateProfile() {
-  const newName = document.getElementById('update-username').value;
-  if (!newName) return;
-  await db.collection('users').doc(currentUser.id).update({ username: newName });
-  currentUser.username = newName;
-  document.getElementById('user-name').textContent = newName;
-  alert('Username updated');
-}
-
-window.onload = () => toggleForms('login');
-</script>
+  <h1>Welcome to Xinn Social</h1>
+  <a href="login.html">Login</a>
+  <a href="register.html">Register</a>
+  <a href="feed.html">Feed</a>
+  <a href="profile.html">Profile</a>
+  <a href="friends.html">Friends</a>
+  <a href="chat.html">Chat</a>
+  <a href="settings.html">Settings</a>
 </body>
 </html>
