@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Settings</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    nav {background:#111; padding:10px; display:flex; justify-content:space-around; color:white;}
+    nav a {color:white; text-decoration:none;}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="feed.html">Feed</a>
+    <a href="profile.html">Profile</a>
+    <a href="friends.html">Friends</a>
+    <a href="chat.html">Chat</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="logout()">Logout</a>
+  </nav>
+
+  <h2>Settings</h2>
+
+  <input id="newName" placeholder="New Username"><br>
+  <button onclick="updateName()">Update Name</button>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
+      authDomain: "coin-base-by-hector.firebaseapp.com",
+      projectId: "coin-base-by-hector"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = 'login.html';
+      else {
+        // Load current name
+        db.collection('users').doc(user.uid).get().then(doc => {
+          const u = doc.data();
+          document.getElementById('newName').value = u.name || '';
+        });
+      }
+    });
+
+    function updateName() {
+      const newName = document.getElementById('newName').value.trim();
+      if (!newName) return alert('Enter a valid name');
+      const user = auth.currentUser;
+      db.collection('users').doc(user.uid).update({ name: newName }).then(() => alert('Name updated'));
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+  </script>
+</body>
+</html>
