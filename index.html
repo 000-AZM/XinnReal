@@ -4,37 +4,146 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Xinn Social</title>
-  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #posts { margin-top: 20px; }
+    .post { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+    button { margin: 5px; }
+  </style>
 </head>
 <body>
-  <div id="app">
-    <div id="nav">
-      <button onclick="navigate('home')">Home</button>
-      <button onclick="navigate('profile')">Profile</button>
-      <button onclick="logout()">Logout</button>
-    </div>
+  <h1>Xinn Social App</h1>
 
-    <div id="auth">
-      <h2>Login / Register</h2>
-      <input type="email" id="email" placeholder="Email"/><br/>
-      <input type="password" id="password" placeholder="Password"/><br/>
-      <button onclick="login()">Login</button>
-      <button onclick="register()">Register</button>
-    </div>
-
-    <div id="home" class="page hidden">
-      <h2>Post Something</h2>
-      <textarea id="postInput" placeholder="What's on your mind?"></textarea>
-      <button onclick="createPost()">Post</button>
-      <div id="posts"></div>
-    </div>
-
-    <div id="profile" class="page hidden">
-      <h2>Your Posts</h2>
-      <div id="myPosts"></div>
-    </div>
+  <div id="auth">
+    <input type="email" id="email" placeholder="Email" /><br>
+    <input type="password" id="password" placeholder="Password" /><br>
+    <button onclick="register()">Register</button>
+    <button onclick="login()">Login</button>
   </div>
 
-  <script type="module" src="app.js"></script>
+  <div id="user-panel" style="display:none;">
+    <p>Welcome <span id="user-email"></span>!</p>
+    <button onclick="logout()">Logout</button>
+    <hr>
+    <input id="newPost" placeholder="Write a post..." />
+    <button onclick="createPost()">Post</button>
+    <div id="posts"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, updateDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
+      authDomain: "coin-base-by-hector.firebaseapp.com",
+      projectId: "coin-base-by-hector",
+      storageBucket: "coin-base-by-hector.appspot.com",
+      messagingSenderId: "398789890422",
+      appId: "1:398789890422:web:ed6a928037b24be2e36a57",
+      measurementId: "G-SGJJM5K3G9"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const newPostInput = document.getElementById("newPost");
+    const postsDiv = document.getElementById("posts");
+
+    document.getElementById("user-panel").style.display = "none";
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        document.getElementById("auth").style.display = "none";
+        document.getElementById("user-panel").style.display = "block";
+        document.getElementById("user-email").innerText = user.email;
+        loadPosts();
+      } else {
+        document.getElementById("auth").style.display = "block";
+        document.getElementById("user-panel").style.display = "none";
+      }
+    });
+
+    window.register = async () => {
+      try {
+        await createUserWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    window.login = async () => {
+      try {
+        await signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value);
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    window.logout = async () => {
+      await signOut(auth);
+    };
+
+    window.createPost = async () => {
+      const user = auth.currentUser;
+      if (user && newPostInput.value.trim()) {
+        await addDoc(collection(db, "posts"), {
+          text: newPostInput.value,
+          email: user.email,
+          uid: user.uid,
+          createdAt: serverTimestamp(),
+          likes: []
+        });
+        newPostInput.value = "";
+      }
+    };
+
+    function loadPosts() {
+      const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+      onSnapshot(q, snapshot => {
+        postsDiv.innerHTML = "";
+        snapshot.forEach(docSnap => {
+          const post = docSnap.data();
+          const postId = docSnap.id;
+          const div = document.createElement("div");
+          div.className = "post";
+          div.innerHTML = `
+            <p><strong>${post.email}</strong>:</p>
+            <p contenteditable="${auth.currentUser.uid === post.uid}" onblur="editPost('${postId}', this.innerText)">${post.text}</p>
+            <p>
+              <button onclick="likePost('${postId}')">❤️ ${post.likes?.length || 0}</button>
+              ${auth.currentUser.uid === post.uid ? `<button onclick="deletePost('${postId}')">🗑 Delete</button>` : ""}
+            </p>
+          `;
+          postsDiv.appendChild(div);
+        });
+      });
+    }
+
+    window.deletePost = async (id) => {
+      await deleteDoc(doc(db, "posts", id));
+    };
+
+    window.editPost = async (id, newText) => {
+      const postRef = doc(db, "posts", id);
+      await updateDoc(postRef, { text: newText });
+    };
+
+    window.likePost = async (id) => {
+      const postRef = doc(db, "posts", id);
+      const snap = await getDocs(query(collection(db, "posts")));
+      const post = snap.docs.find(d => d.id === id);
+      const likes = post.data().likes || [];
+      const uid = auth.currentUser.uid;
+      const updatedLikes = likes.includes(uid)
+        ? likes.filter(x => x !== uid)
+        : [...likes, uid];
+      await updateDoc(postRef, { likes: updatedLikes });
+    };
+  </script>
 </body>
 </html>
