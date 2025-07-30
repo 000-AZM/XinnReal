@@ -1,0 +1,30 @@
+body {
+  font-family: Arial;
+  background: #f3f3f3;
+  margin: 0;
+  padding: 20px;
+}
+.hidden {
+  display: none;
+}
+#nav button {
+  margin-right: 10px;
+}
+.page {
+  margin-top: 20px;
+}
+.post {
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.post small {
+  display: block;
+  color: gray;
+}
+.like-btn {
+  color: blue;
+  cursor: pointer;
+}
