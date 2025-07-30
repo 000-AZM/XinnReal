@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Friends</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    nav {background:#111; padding:10px; display:flex; justify-content:space-around; color:white;}
+    nav a {color:white; text-decoration:none;}
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="feed.html">Feed</a>
+    <a href="profile.html">Profile</a>
+    <a href="friends.html">Friends</a>
+    <a href="chat.html">Chat</a>
+    <a href="settings.html">Settings</a>
+    <a href="login.html" onclick="logout()">Logout</a>
+  </nav>
+
+  <h2>Friends</h2>
+
+  <input id="friendEmail" placeholder="Friend's Email">
+  <button onclick="addFriend()">Add Friend</button>
+
+  <h3>Your Friends</h3>
+  <ul id="friendList"></ul>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGN7t5FjDeJ-ewm7S_9z0VJrRSggTaJ2Q",
+      authDomain: "coin-base-by-hector.firebaseapp.com",
+      projectId: "coin-base-by-hector"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUserId = null;
+
+    auth.onAuthStateChanged(user => {
+      if (!user) window.location.href = 'login.html';
+      else {
+        currentUserId = user.uid;
+        loadFriends();
+      }
+    });
+
+    function addFriend() {
+      const email = document.getElementById('friendEmail').value.trim();
+      if (!email) return alert('Enter friend email');
+      // Find user by email
+      db.collection('users').where('email', '==', email).get().then(snapshot => {
+        if (snapshot.empty) return alert('User not found');
+        let friendId = null;
+        snapshot.forEach(doc => friendId = doc.id);
+        if (friendId === currentUserId) return alert('Cannot add yourself');
+        // Add friend to current user
+        const userRef = db.collection('users').doc(currentUserId);
+        userRef.update({
+          friends: firebase.firestore.FieldValue.arrayUnion(friendId)
+        }).then(() => {
+          alert('Friend added!');
+          loadFriends();
+        });
+      });
+    }
+
+    function loadFriends() {
+      db.collection('users').doc(currentUserId).get().then(doc => {
+        const friends = doc.data().friends || [];
+        if (friends.length === 0) {
+          document.getElementById('friendList').innerHTML = '<li>No friends yet</li>';
+          return;
+        }
+        // Load friends' names
+        let friendNames = [];
+        const promises = friends.map(fid =>
+          db.collection('users').doc(fid).get().then(d => d.data()?.name || 'Unknown')
+        );
+        Promise.all(promises).then(names => {
+          let html = '';
+          names.forEach(n => html += `<li>${n}</li>`);
+          document.getElementById('friendList').innerHTML = html;
+        });
+      });
+    }
+
+    function logout() {
+      auth.signOut();
+    }
+  </script>
+</body>
+</html>
